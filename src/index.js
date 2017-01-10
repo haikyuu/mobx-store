@@ -11,9 +11,12 @@ export default function(intitialState: Object = {}, userConfig?: StoreConfig = {
     ...userConfig
   }
 
-  const create = config.noHistory
-    ? createDataWithoutHistory
-    : partialRight(createData, config.historyLimit)
+  const create = (data)=>{
+    return config.noHistory
+    ? createDataWithoutHistory(data, config)
+    : partialRight(createData, config)(data)
+  }
+
 
   // Store API
   db.canRedo = (key: string): boolean => db.object.get(key).__future.length > 0
@@ -26,7 +29,8 @@ export default function(intitialState: Object = {}, userConfig?: StoreConfig = {
   db.fromObject = fromObject
   db.object = fromObject(intitialState)
   db.schedule = schedule
-
+  db.disableHistory = ()=> config.noHistory = true
+  db.enableHistory = ()=> config.noHistory = false
   // Query the DB, allowing the user to chain functions to query the store
   function db(key: string, funcs?: Array<Function> | Function): Object {
     if (!db.object.get(key)) throw new Error(`Tried to retrieve undefined key: ${key}`)
@@ -123,7 +127,7 @@ function revertChange(change: UpdateChange & SpliceChange): UpdateChange | Splic
 }
 
 // Create a store entry such that the it has history that can be undo/redo
-function createData(data: Object, limit: number): Object {
+function createData(data: Object, config: Object): Object {
   // Throw an error if the data isn't an array or object
   if (typeof data !== 'object') throw new Error('Top level elements of the store need to be arrays or objects')
 
@@ -134,7 +138,8 @@ function createData(data: Object, limit: number): Object {
     __past: { value: [], writable: true },
     __future: { value: [], writable: true },
     __trackChanges: { value: true, writable: true },
-    __limit: { value: limit }
+    __limit: { value: config.historyLimit },
+    __config: { value: config }
   })
 }
 
@@ -151,7 +156,7 @@ spy(function(change) {
 
   // Add the event to the history
   const obs = change.object.__parent
-  if (obs.__trackChanges) {
+  if (obs.__trackChanges && !obs.__config.noHistory) {
     obs.__future = []
     obs.__past.push(change)
     if (obs.__past.length > obs.__limit) obs.__past.shift()

@@ -91,6 +91,29 @@ test('Store limits undo history', function(t) {
   store('test').push(1, 2, 3)
   t.is(store('test').__past.length, 1)
 })
+test('disableHistory disables history 🙄', function(t) {
+  const store = mobxstore({ test: [] })
+  store('test').push(1, 2, 3)
+  t.is(store('test').__past.length, 1)
+  store.disableHistory()
+  store('test').push(1, 2, 3)
+  store('test').push(1, 2, 3)
+  t.is(store('test').__past.length, 1)
+})
+
+test('enableHistory enables history 🙄', function(t) {
+  const store = mobxstore({ test: [] })
+  store('test').push(1, 2, 3)
+  t.is(store('test').__past.length, 1)
+  store.disableHistory()
+  store('test').push(1, 2, 3)
+  store('test').push(1, 2, 3)
+  t.is(store('test').__past.length, 1)
+  store.enableHistory()
+  store('test').push(1, 2, 3)
+  store('test').push(1, 2, 3)
+  t.is(store('test').__past.length, 3)
+})
 
 test('Store should not have undo history', function(t) {
   const store = mobxstore({ test: [], test2: {} }, { noHistory: true })
